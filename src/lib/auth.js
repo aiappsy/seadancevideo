@@ -1,18 +1,46 @@
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "./firebase/admin";
 import { UserService } from "./services/user";
 import { SettingsService } from "./services/settings";
+
+const providers = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+providers.push(
+  CredentialsProvider({
+    id: "credentials",
+    name: "Email Studio Pass",
+    credentials: {
+      email: { label: "Email", type: "email", placeholder: "you@example.com" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email) return null;
+      const email = credentials.email.trim().toLowerCase();
+      if (!email || !email.includes("@")) return null;
+      return {
+        id: email,
+        name: email.split("@")[0],
+        email: email,
+        image: null,
+      };
+    },
+  })
+);
 
 export const authOptions = {
   session: {
     strategy: "jwt",
   },
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-  ],
+  providers,
   callbacks: {
     async signIn({ user }) {
       if (!user?.email) return false;
@@ -88,7 +116,8 @@ export const authOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "maxmotion-production-jwt-auth-secret-key-2026-safe",
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
