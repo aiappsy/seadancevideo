@@ -13,6 +13,12 @@ import {
   FaPlus,
   FaTrash,
   FaTerminal,
+  FaKey,
+  FaCopy,
+  FaCheck,
+  FaSyncAlt,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -28,9 +34,51 @@ export default function AdminSettingsPage() {
   const [newTplModel, setNewTplModel] = useState("wan-2.1");
   const [newTplCategory, setNewTplCategory] = useState("Cinematic");
 
+  // Master App API Key state
+  const [masterAppKey, setMasterAppKey] = useState("");
+  const [showAppKey, setShowAppKey] = useState(false);
+  const [copiedAppKey, setCopiedAppKey] = useState(false);
+  const [rotatingAppKey, setRotatingAppKey] = useState(false);
+
   useEffect(() => {
     fetchSettings();
+    fetchAppKey();
   }, []);
+
+  const fetchAppKey = async () => {
+    try {
+      const res = await fetch("/api/admin/app-key");
+      if (res.ok) {
+        const data = await res.json();
+        setMasterAppKey(data.key || "");
+      }
+    } catch (e) {}
+  };
+
+  const handleRotateAppKey = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to generate/rotate the Master App API Key? Any external applications or webhooks using the current key will need to be updated."
+      )
+    )
+      return;
+
+    try {
+      setRotatingAppKey(true);
+      const res = await fetch("/api/admin/app-key", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.key) {
+        setMasterAppKey(data.key);
+        toast.success("New Master App API Key generated!");
+      } else {
+        toast.error(data.error || "Failed to rotate key");
+      }
+    } catch (e) {
+      toast.error("Error rotating key");
+    } finally {
+      setRotatingAppKey(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -961,6 +1009,79 @@ export default function AdminSettingsPage() {
                   value={typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://maxmotion.ai/api/mcp"}
                   className="w-full px-3 py-2 bg-glass-hover/50 border border-glass-border rounded-md text-xs font-mono text-amber-300"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Master Application API Key Card */}
+          <div className="bg-glass-bg border border-glass-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-glass-border">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <FaKey className="text-primary" /> Master Application API Key
+                </h3>
+                <p className="text-[10px] text-muted">
+                  System-level credentials for external backends, n8n workflows, microservices, and server-to-server video pipelines.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRotateAppKey}
+                disabled={rotatingAppKey}
+                className="px-3 py-1.5 rounded-lg bg-glass-hover hover:bg-glass-bg border border-glass-border text-foreground text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                <FaSyncAlt size={10} className={rotatingAppKey ? "animate-spin text-primary" : ""} />
+                <span>{rotatingAppKey ? "Rotating..." : "Rotate Key"}</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+                Active Master App Key
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type={showAppKey ? "text" : "password"}
+                  readOnly
+                  value={masterAppKey || "Loading or generating..."}
+                  className="flex-1 px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs font-mono text-foreground outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAppKey(!showAppKey)}
+                  className="px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-muted hover:text-foreground text-xs"
+                  title={showAppKey ? "Hide Key" : "Reveal Key"}
+                >
+                  {showAppKey ? <FaEyeSlash size={13} /> : <FaEye size={13} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!masterAppKey) return;
+                    navigator.clipboard.writeText(masterAppKey);
+                    setCopiedAppKey(true);
+                    toast.success("Master App API Key copied!");
+                    setTimeout(() => setCopiedAppKey(false), 2000);
+                  }}
+                  className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-primary/20"
+                >
+                  {copiedAppKey ? <FaCheck size={11} /> : <FaCopy size={11} />}
+                  <span>{copiedAppKey ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Connection Examples */}
+            <div className="p-3 bg-glass-hover/60 border border-glass-border rounded-lg space-y-2 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+                Server-to-Server Authentication Syntax:
+              </span>
+              <div className="bg-black/50 p-2.5 rounded font-mono text-[11px] text-amber-300 overflow-x-auto space-y-1">
+                <div># Direct Video Generation cURL</div>
+                <div>curl -X POST {typeof window !== "undefined" ? window.location.origin : "https://maxmotion.ai"}/api/seedance \</div>
+                <div className="text-neutral-400">  -H &quot;Authorization: Bearer {masterAppKey ? `${masterAppKey.slice(0, 14)}...` : "mm_app_..."}&quot; \</div>
+                <div className="text-neutral-400">  -H &quot;Content-Type: application/json&quot; \</div>
+                <div className="text-neutral-400">  -d &apos;{JSON.stringify({ prompt: "Cinematic drift", model: "wan-2.1" })}&apos;</div>
               </div>
             </div>
           </div>

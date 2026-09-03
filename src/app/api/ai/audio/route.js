@@ -3,11 +3,14 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { SettingsService } from "@/lib/services/settings";
 import { db } from "@/lib/firebase/admin";
+import { AppKeyService } from "@/lib/services/app-key";
 
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const keyAuth = !session?.user ? await AppKeyService.authenticateRequest(req) : null;
+
+    if (!session?.user?.id && !keyAuth?.isValid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -62,7 +62,7 @@ const CAMERA_MOTIONS = [
   { value: "static", label: "Static Tripod" },
 ];
 
-function CustomSelect({ label, value, options, onChange, icon: Icon }) {
+function CustomSelect({ label, value, options, onChange, icon: Icon, tooltip }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -79,9 +79,16 @@ function CustomSelect({ label, value, options, onChange, icon: Icon }) {
 
   return (
     <div className="space-y-1.5" ref={containerRef}>
-      <label className="text-[10px] font-medium text-muted uppercase tracking-wider">
-        {label}
-      </label>
+      <div className="flex items-center gap-1.5">
+        <label className="text-[10px] font-medium text-muted uppercase tracking-wider">
+          {label}
+        </label>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <span className="text-[9px] text-muted hover:text-primary cursor-pointer">ⓘ</span>
+          </Tooltip>
+        )}
+      </div>
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -148,6 +155,7 @@ export default function Home() {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [newAudioUrl, setNewAudioUrl] = useState("");
+  const [autoAudio, setAutoAudio] = useState(false);
 
   // Dynamic Settings & Templates
   const [appName, setAppName] = useState("MaxMotion AI");
@@ -448,6 +456,26 @@ export default function Home() {
           setResultUrl(data.imageUrl);
           setLoading(false);
           toast.success("Generation completed!");
+
+          if (autoAudio && data.creationId) {
+            toast.success("Synthesizing Foley & sound effects...");
+            fetch("/api/ai/audio", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt,
+                duration,
+                creationId: data.creationId,
+              }),
+            })
+              .then((r) => r.json())
+              .then((aData) => {
+                if (aData?.audioUrl) {
+                  toast.success("Synchronized atmospheric sound synthesized!");
+                }
+              })
+              .catch((e) => console.error("Auto audio failed:", e));
+          }
         } else if (data.status === "failed") {
           setError(data.error || "Generation failed.");
           setLoading(false);
@@ -731,15 +759,17 @@ export default function Home() {
                 <label className="text-[10px] font-medium text-muted uppercase tracking-wider">
                   Prompt
                 </label>
-                <button
-                  type="button"
-                  onClick={handleEnhancePrompt}
-                  disabled={isEnhancing || !prompt.trim()}
-                  className="text-[10px] text-primary hover:text-primary-hover font-bold flex items-center gap-1 transition-colors disabled:opacity-40"
-                >
-                  <FaMagic size={9} />
-                  <span>{isEnhancing ? "Enhancing..." : "✨ Enhance with AI"}</span>
-                </button>
+                <Tooltip content="Rewrites prompt into a cinematic 35mm composition tailored to the active engine using Gemini Flash">
+                  <button
+                    type="button"
+                    onClick={handleEnhancePrompt}
+                    disabled={isEnhancing || !prompt.trim()}
+                    className="text-[10px] text-primary hover:text-primary-hover font-bold flex items-center gap-1 transition-colors disabled:opacity-40"
+                  >
+                    <FaMagic size={9} />
+                    <span>{isEnhancing ? "Enhancing..." : "✨ Enhance with AI"}</span>
+                  </button>
+                </Tooltip>
               </div>
               <textarea
                 value={prompt}
@@ -1024,24 +1054,28 @@ export default function Home() {
                 value={aspectRatio}
                 options={ASPECT_RATIOS}
                 onChange={setAspectRatio}
+                tooltip="16:9 for YouTube & Cinema, 9:16 for TikTok, Instagram Reels & YouTube Shorts"
               />
               <CustomSelect
                 label="Resolution"
                 value={resolution}
                 options={RESOLUTIONS}
                 onChange={setResolution}
+                tooltip="720p HD for crisp detail, or 480p for ultra-fast draft generation"
               />
               <CustomSelect
                 label="Duration"
                 value={duration}
                 options={getAvailableDurations()}
                 onChange={setDuration}
+                tooltip="Length of the generated video clip in seconds"
               />
               <CustomSelect
                 label="Quality"
                 value={quality}
                 options={QUALITIES}
                 onChange={setQuality}
+                tooltip="High quality applies extra inference steps for smoother texture and clarity"
               />
               <div className="col-span-2 sm:col-span-2">
                 <CustomSelect
@@ -1050,8 +1084,40 @@ export default function Home() {
                   options={CAMERA_MOTIONS}
                   onChange={setCameraMotion}
                   icon={FaCompass}
+                  tooltip="Guides the AI virtual camera trajectory (dolly, pan, tilt, orbit, or static tripod)"
                 />
               </div>
+            </div>
+
+            {/* Auto Sound Effects Toggle with Tooltip */}
+            <div className="flex items-center justify-between p-3 bg-glass-hover/60 border border-glass-border rounded-lg">
+              <div className="flex items-center gap-2">
+                <FaMusic className="text-amber-400 text-xs" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-foreground">
+                      Auto-Synthesize Audio & Foley
+                    </span>
+                    <Tooltip content="Synthesizes realistic synchronized atmospheric audio and sound effects (MMAudio v2) alongside the video.">
+                      <span className="text-[9px] text-muted hover:text-primary cursor-pointer">ⓘ</span>
+                    </Tooltip>
+                  </div>
+                  <p className="text-[9px] text-muted">Synchronized atmospheric audio track</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoAudio(!autoAudio)}
+                className={`w-10 h-5 rounded-full transition-colors relative ${
+                  autoAudio ? "bg-amber-500" : "bg-divider"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform transform absolute top-0.5 ${
+                    autoAudio ? "translate-x-5.5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
             </div>
           </div>
 

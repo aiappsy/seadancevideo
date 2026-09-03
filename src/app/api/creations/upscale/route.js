@@ -4,17 +4,21 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebase/admin";
 import { UserService } from "@/lib/services/user";
 import { SettingsService } from "@/lib/services/settings";
+import { AppKeyService } from "@/lib/services/app-key";
 
 const UPSCALE_CREDIT_COST = 25;
 
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const keyAuth = !session?.user ? await AppKeyService.authenticateRequest(req) : null;
+
+    if (!session?.user?.id && !keyAuth?.isValid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = session?.user?.id || keyAuth?.id;
+    const isMaster = keyAuth?.isMasterKey || session?.user?.role === "admin";
     const { creationId } = await req.json();
 
     if (!creationId) {

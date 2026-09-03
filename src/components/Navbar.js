@@ -15,6 +15,7 @@ import {
   FiKey,
 } from "react-icons/fi";
 import config from "@/lib/config";
+import Tooltip from "@/components/Tooltip";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -83,20 +84,22 @@ export default function Navbar() {
           })}
 
           {isAdmin && (
-            <Link
-              href="/admin"
-              className={`text-[13px] font-bold transition-all relative py-1 flex items-center gap-1 ${
-                pathname.startsWith("/admin")
-                  ? "text-primary"
-                  : "text-amber-400 hover:text-amber-300"
-              }`}
-            >
-              <FiShield size={13} />
-              <span>Admin</span>
-              {pathname.startsWith("/admin") && (
-                <div className="absolute -bottom-[20px] left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
-            </Link>
+            <Tooltip content="Access administration console, Stripe/PayPal billing, and API keys">
+              <Link
+                href="/admin"
+                className={`text-[13px] font-bold transition-all relative py-1 flex items-center gap-1 ${
+                  pathname.startsWith("/admin")
+                    ? "text-primary"
+                    : "text-amber-400 hover:text-amber-300"
+                }`}
+              >
+                <FiShield size={13} />
+                <span>Admin</span>
+                {pathname.startsWith("/admin") && (
+                  <div className="absolute -bottom-[20px] left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
+            </Tooltip>
           )}
         </nav>
 
@@ -113,27 +116,31 @@ export default function Navbar() {
             <div className="flex items-center">
               {/* BYOK or Credit Balance indicator */}
               {isByok ? (
-                <Link
-                  href="/settings"
-                  className="flex items-center h-9 border border-emerald-500/40 rounded-l bg-emerald-500/10 px-3 text-emerald-400 text-xs font-bold gap-1.5 hover:bg-emerald-500/20 transition-colors"
-                >
-                  <FiKey size={12} />
-                  <span>BYOK Mode</span>
-                </Link>
-              ) : (
-                <div className="flex items-center h-9 border border-divider rounded-l bg-bg-page/30 overflow-hidden pr-2">
-                  <span className="font-bold text-[13px] px-3 flex items-center text-primary-text gap-1">
-                    <FiDollarSign className="text-emerald-500 text-xs" />
-                    {session.user.credits !== undefined ? session.user.credits : 0}
-                  </span>
+                <Tooltip content="Bring-Your-Own-Key is active. All video generations consume 0 platform credits.">
                   <Link
-                    href="/pricing"
-                    className="flex items-center justify-center w-5 h-5 rounded hover:bg-bg-card text-secondary-text transition-colors"
-                    title="Buy Credits"
+                    href="/settings"
+                    className="flex items-center h-9 border border-emerald-500/40 rounded-l bg-emerald-500/10 px-3 text-emerald-400 text-xs font-bold gap-1.5 hover:bg-emerald-500/20 transition-colors"
                   >
-                    <FiPlus size={14} />
+                    <FiKey size={12} />
+                    <span>BYOK Mode</span>
                   </Link>
-                </div>
+                </Tooltip>
+              ) : (
+                <Tooltip content="Current available studio credits. Click + to buy credit packs.">
+                  <div className="flex items-center h-9 border border-divider rounded-l bg-bg-page/30 overflow-hidden pr-2">
+                    <span className="font-bold text-[13px] px-3 flex items-center text-primary-text gap-1">
+                      <FiDollarSign className="text-emerald-500 text-xs" />
+                      {session.user.credits !== undefined ? session.user.credits : 0}
+                    </span>
+                    <Link
+                      href="/pricing"
+                      className="flex items-center justify-center w-5 h-5 rounded hover:bg-bg-card text-secondary-text transition-colors"
+                      title="Buy Credits"
+                    >
+                      <FiPlus size={14} />
+                    </Link>
+                  </div>
+                </Tooltip>
               )}
 
               {/* Profile Menu Toggle */}

@@ -14,6 +14,8 @@ import {
 import { useRouter } from "next/navigation";
 import { downloadMedia } from "@/lib/utils";
 import { FiDownload } from "react-icons/fi";
+import Tooltip from "@/components/Tooltip";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function CreationsPage() {
   const { data: session, status } = useSession();
@@ -60,6 +62,7 @@ export default function CreationsPage() {
 
   return (
     <div className="flex-1 bg-transparent overflow-y-auto custom-scrollbar p-4 md:p-12">
+      <Toaster position="top-right" />
       <header className="max-w-7xl mx-auto mb-10 space-y-3 pt-4 md:pt-0">
         <div className="flex items-center gap-3 text-primary mb-1">
           <FaCalendarAlt className="text-sm" />
@@ -308,7 +311,7 @@ export default function CreationsPage() {
                       onClick={() => {
                         const url = `${window.location.origin}/v/${selectedImage.id}`;
                         navigator.clipboard.writeText(url);
-                        alert("Public share URL copied!");
+                        toast.success("Public share link copied!");
                       }}
                       className="py-2.5 bg-glass-hover hover:bg-glass-bg border border-glass-border rounded-lg text-xs font-bold text-foreground flex items-center justify-center gap-2 transition-all"
                     >
@@ -329,33 +332,35 @@ export default function CreationsPage() {
                     </button>
                   </div>
 
-                  <button
-                    onClick={async () => {
-                      if (selectedImage.status !== "completed") return;
-                      setUpscaling(true);
-                      try {
-                        const res = await fetch("/api/creations/upscale", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ creationId: selectedImage.id }),
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          alert("4K Upscale queued! High-resolution video will be ready in ~30s.");
-                        } else {
-                          alert(data.error || "Failed to upscale");
+                  <Tooltip content="Upscales video to 4K Cinema resolution with enhanced textures and AI edge sharpening">
+                    <button
+                      onClick={async () => {
+                        if (selectedImage.status !== "completed") return;
+                        setUpscaling(true);
+                        try {
+                          const res = await fetch("/api/creations/upscale", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ creationId: selectedImage.id }),
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            toast.success("4K Upscale queued! High-resolution video will be ready in ~30s.");
+                          } else {
+                            toast.error(data.error || "Failed to upscale");
+                          }
+                        } catch (e) {
+                          toast.error(e.message || "Failed to upscale");
+                        } finally {
+                          setUpscaling(false);
                         }
-                      } catch (e) {
-                        alert(e.message);
-                      } finally {
-                        setUpscaling(false);
-                      }
-                    }}
-                    disabled={upscaling || selectedImage.status !== "completed"}
-                    className="w-full py-2.5 bg-glass-hover hover:bg-glass-bg border border-amber-400/40 text-amber-300 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all"
-                  >
-                    <span>⚡ {upscaling ? "Queuing 4K..." : "Enhance / Upscale to 4K"}</span>
-                  </button>
+                      }}
+                      disabled={upscaling || selectedImage.status !== "completed"}
+                      className="w-full py-2.5 bg-glass-hover hover:bg-glass-bg border border-amber-400/40 text-amber-300 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                    >
+                      <span>⚡ {upscaling ? "Queuing 4K..." : "Enhance / Upscale to 4K"}</span>
+                    </button>
+                  </Tooltip>
 
                   <button
                     onClick={async () => {

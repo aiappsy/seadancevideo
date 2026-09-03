@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { AIService } from "@/lib/services/ai";
+import { AppKeyService } from "@/lib/services/app-key";
 
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
+    const keyAuth = !session?.user ? await AppKeyService.authenticateRequest(req) : null;
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user && !keyAuth?.isValid) {
+      return NextResponse.json({ error: "Unauthorized: Invalid or missing authentication" }, { status: 401 });
     }
+
+    const userId = session?.user?.id || keyAuth?.id || "master_app_system";
 
     const body = await req.json();
     const {
@@ -31,7 +35,7 @@ export async function POST(req) {
 
     let result;
     if (mode === "reference-to-video") {
-      result = await AIService.edit(session.user.id, {
+      result = await AIService.edit(userId, {
         mode,
         prompt,
         images_list,
@@ -44,7 +48,7 @@ export async function POST(req) {
         model,
       });
     } else {
-      result = await AIService.generate(session.user.id, {
+      result = await AIService.generate(userId, {
         mode,
         prompt,
         aspect_ratio,

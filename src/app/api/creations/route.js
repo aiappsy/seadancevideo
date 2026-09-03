@@ -2,19 +2,26 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebase/admin";
 import { NextResponse } from "next/server";
+import { AppKeyService } from "@/lib/services/app-key";
 
-export async function GET() {
+export async function GET(req) {
   const session = await getServerSession(authOptions);
+  const keyAuth = !session?.user ? await AppKeyService.authenticateRequest(req) : null;
 
-  if (!session || !session.user) {
+  if (!session?.user && !keyAuth?.isValid) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = session?.user?.id || keyAuth?.id;
+  const isMaster = keyAuth?.isMasterKey;
+
   try {
-    const snapshot = await db
-      .collection("creations")
-      .where("userId", "==", session.user.id)
-      .get();
+    let query = db.collection("creations");
+    if (!isMaster && userId) {
+      query = query.where("userId", "==", userId);
+    }
+
+    const snapshot = await query.get();
 
     const creations = snapshot.docs
       .map((doc) => ({

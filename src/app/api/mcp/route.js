@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/admin";
 import { AIService } from "@/lib/services/ai";
 import { defaultTemplates } from "@/lib/templates";
+import { AppKeyService } from "@/lib/services/app-key";
 
 export const dynamic = "force-dynamic";
 
@@ -27,17 +28,21 @@ async function authenticateKey(req, bodyParams = {}) {
 
   if (!apiKey) return null;
 
-  // Query user by apiKey
-  const usersSnap = await db
-    .collection("users")
-    .where("apiKey", "==", apiKey)
-    .limit(1)
-    .get();
+  const validation = await AppKeyService.validateApiKey(apiKey);
+  if (!validation.isValid) return null;
 
-  if (usersSnap.empty) return null;
+  if (validation.isMasterKey) {
+    return {
+      id: "app_system",
+      role: "admin",
+      name: "Master App Connection",
+      email: "system@maxmotion.ai",
+      credits: 999999,
+      isMasterKey: true,
+    };
+  }
 
-  const userDoc = usersSnap.docs[0];
-  return { id: userDoc.id, ...userDoc.data() };
+  return { id: validation.id, ...validation.user, credits: validation.credits };
 }
 
 export async function GET(req) {
