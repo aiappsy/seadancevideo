@@ -34,7 +34,8 @@ export default function AdminLayout({ children }) {
     if (status === "unauthenticated") {
       router.push("/login?callbackUrl=/admin");
     } else if (status === "authenticated") {
-      if (session.user.role !== "admin") {
+      const email = session?.user?.email?.trim().toLowerCase();
+      if (email !== "paljuritzen@gmail.com") {
         router.push("/");
       } else {
         setAuthorized(true);

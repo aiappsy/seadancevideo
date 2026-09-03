@@ -1,47 +1,61 @@
 # 🛡️ MaxMotion AI — Complete Administrator & Operations Manual
 
-This manual is the official operations guide for managing, configuring, monetizing, and scaling the **MaxMotion AI** generative video SaaS platform.
+> **Auto-Generated Documentation** — Last synchronized: `2026-09-03`
+> Administrative access is strictly restricted to: `paljuritzen@gmail.com`
 
 ---
 
 ## Table of Contents
-1. [Initial Admin Provisioning & Access Control](#1-initial-admin-provisioning--access-control)
-2. [Admin Console Overview (`/admin`)](#2-admin-console-overview-admin)
-3. [System Settings & The Master Key Vault (`/admin/settings`)](#3-system-settings--the-master-key-vault-adminsettings)
+1. [Initial Admin Provisioning & Hardened Access Control](#1-initial-admin-provisioning--hardened-access-control)
+2. [Zero Pre-Deployment Requirements & In-App Setup](#2-zero-pre-deployment-requirements--in-app-setup)
+3. [Admin Console Overview (`/admin`)](#3-admin-console-overview-admin)
+4. [System Settings & The Master Key Vault (`/admin/settings`)](#4-system-settings--the-master-key-vault-adminsettings)
    - [General & Branding](#general--branding)
    - [AI Engines & Multi-Key Vault](#ai-engines--multi-key-vault)
    - [Credit Multipliers & Pricing Rates](#credit-multipliers--pricing-rates)
    - [Payment Gateways (Stripe & PayPal REST)](#payment-gateways-stripe--paypal-rest)
    - [High-Bandwidth Storage & $0 Egress (Cloudflare R2)](#high-bandwidth-storage--0-egress-cloudflare-r2)
    - [Legal & Compliance](#legal--compliance)
-4. [Master Application API Key & External Integrations](#4-master-application-api-key--external-integrations)
-5. [Live API Key Diagnostic Suite (`⚡ Test All Keys`)](#5-live-api-key-diagnostic-suite--test-all-keys)
-6. [User & Account Management (`/admin/users`)](#6-user--account-management-adminusers)
-7. [Subscription Plans & Credit Packages (`/admin/plans`)](#7-subscription-plans--credit-packages-adminplans)
-8. [Communications, Broadcasts & Resend Email (`/admin/communication`)](#8-communications-broadcasts--resend-email-admincommunication)
-9. [Profit & Margin Calculator (`/admin/calculator`)](#9-profit--margin-calculator-admincalculator)
-10. [Cloud Run Production Deployment & Operations](#10-cloud-run-production-deployment--operations)
+5. [Master Application API Key & External Integrations](#5-master-application-api-key--external-integrations)
+6. [Live API Key Diagnostic Suite (`⚡ Test All Keys`)](#6-live-api-key-diagnostic-suite--test-all-keys)
+7. [User & Account Management (`/admin/users`)](#7-user--account-management-adminusers)
+8. [Subscription Plans & Credit Packages (`/admin/plans`)](#8-subscription-plans--credit-packages-adminplans)
+9. [Communications, Broadcasts & Resend Email (`/admin/communication`)](#9-communications-broadcasts--resend-email-admincommunication)
+10. [Profit & Margin Calculator (`/admin/calculator`)](#10-profit--margin-calculator-admincalculator)
+11. [Cloud Run Production Deployment & Operations](#11-cloud-run-production-deployment--operations)
 
 ---
 
-## 1. Initial Admin Provisioning & Access Control
+## 1. Initial Admin Provisioning & Hardened Access Control
 
-MaxMotion AI uses role-based access control (RBAC) enforced in server-side middleware and API routes via [`src/lib/auth-admin.js`](file:///C:/Users/paul/Downloads/50apps-main/50apps-main/video_generation/seedance-2-generator/src/lib/auth-admin.js).
-
-### Designating the Initial Super Admin
-Set the following environment variable in your `.env.local` or Cloud Run environment:
-```env
-INITIAL_ADMIN_EMAIL=admin@yourdomain.com
+Administrative access to MaxMotion AI is cryptographically locked and enforced server-side.
+Only the verified account:
 ```
-When this email signs in via Google OAuth or credentials:
-1. The server automatically grants them the `admin` role in Firestore.
-2. The golden **Admin** shield icon appears in the top navigation bar.
-3. Access to `/admin` and all `/api/admin/*` endpoints is unlocked.
-4. Admins can promote other users to the `admin` role directly from the [User Management Console (`/admin/users`)](/admin/users).
+paljuritzen@gmail.com
+```
+is permitted to view administrative dashboards, access `/admin/*` routes, or invoke administrative API endpoints (`/api/admin/*`). Any other user role or email attempting access is intercepted with HTTP 403 Forbidden.
 
 ---
 
-## 2. Admin Console Overview (`/admin`)
+## 2. Zero Pre-Deployment Requirements & In-App Setup
+
+This application has been engineered to boot and run **without requiring any initial API keys or configuration secrets in `.env`**.
+
+### How Zero-Env Deployment Works:
+1. **Application Boots Immediately**: The server boots with resilient fallbacks for NextAuth JWT secrets, local application defaults, and dynamic settings.
+2. **Immediate Super-Admin Login**: The designated super-admin (`paljuritzen@gmail.com`) logs in via Google Profile or Email Studio Pass.
+3. **Configure Everything Inside the App**: Once logged in, the administrator visits [**Admin Settings (`/admin/settings`)**](/admin/settings) to configure all platform credentials:
+   - Google OAuth credentials
+   - Stripe & PayPal payment gateways
+   - ByteDance / MuAPI, Fal.ai, and Gemini Flash API keys
+   - ElevenLabs voiceover keys
+   - Resend transactional email keys
+   - Cloudflare R2 / S3 storage credentials
+4. **Instant Persistence in Firestore**: All keys and rates are persisted dynamically to Google Cloud Firestore (`system_settings/config`) and immediately take effect platform-wide without redeploying the server.
+
+---
+
+## 3. Admin Console Overview (`/admin`)
 
 The Admin Dashboard provides real-time operational telemetry across four core sections:
 - **System Metrics**: Total registered creators, total video generations, active subscriptions, and gross credit consumption.
@@ -50,7 +64,7 @@ The Admin Dashboard provides real-time operational telemetry across four core se
 
 ---
 
-## 3. System Settings & The Master Key Vault (`/admin/settings`)
+## 4. System Settings & The Master Key Vault (`/admin/settings`)
 
 All platform settings are stored dynamically in the Firestore collection `system_settings/config`. Changes saved in the admin console take effect immediately across all users without requiring a redeployment or server restart.
 
@@ -119,7 +133,7 @@ To eliminate egress bandwidth costs:
 
 ---
 
-## 4. Master Application API Key & External Integrations
+## 5. Master Application API Key & External Integrations
 
 Located in **Admin Settings $\to$ MCP & Developer**:
 - The **Master App API Key** (`mm_app_...`) allows your server infrastructure, microservices, mobile apps, or automation workflows (e.g. n8n, Make.com) to generate videos programmatically.
@@ -139,7 +153,7 @@ curl -X POST https://yourdomain.com/api/seedance \
 
 ---
 
-## 5. Live API Key Diagnostic Suite (`⚡ Test All Keys`)
+## 6. Live API Key Diagnostic Suite (`⚡ Test All Keys`)
 
 In the header of `/admin/settings`, click **⚡ Test All Keys**:
 - Concurrently pings every configured provider:
@@ -156,18 +170,18 @@ In the header of `/admin/settings`, click **⚡ Test All Keys**:
 
 ---
 
-## 6. User & Account Management (`/admin/users`)
+## 7. User & Account Management (`/admin/users`)
 
 Manage all platform creators from a single administrative table:
 - **Search & Filter**: Search by user email, display name, or user ID.
 - **Credit Balance Adjustments**: Manually grant or deduct credits for refunds, promotions, or VIP support.
-- **Role Assignment**: Elevate trusted team members to `admin` or revoke administrative rights.
+- **Role Assignment**: Elevate trusted team members or adjust privileges.
 - **Plan Overrides**: Assign custom subscription plans (e.g. *Enterprise*, *Agency Pro*).
 - **Account Suspension**: Temporarily freeze abusive accounts.
 
 ---
 
-## 7. Subscription Plans & Credit Packages (`/admin/plans`)
+## 8. Subscription Plans & Credit Packages (`/admin/plans`)
 
 Manage your pricing tiers from `/admin/plans`:
 - **Create Plan**: Set name (e.g. *Starter*, *Pro Creator*, *Studio Agency*), price, and recurring credit allocations.
@@ -177,7 +191,7 @@ Manage your pricing tiers from `/admin/plans`:
 
 ---
 
-## 8. Communications, Broadcasts & Resend Email (`/admin/communication`)
+## 9. Communications, Broadcasts & Resend Email (`/admin/communication`)
 
 Send system-wide or targeted messages from `/admin/communication`:
 - **Broadcast Announcements**: Send updates about new models, downtime notices, or promotions to all registered users.
@@ -188,7 +202,7 @@ Send system-wide or targeted messages from `/admin/communication`:
 
 ---
 
-## 9. Profit & Margin Calculator (`/admin/calculator`)
+## 10. Profit & Margin Calculator (`/admin/calculator`)
 
 An in-app financial modeling tool designed to ensure healthy unit economics:
 - **Input Parameters**: Model compute cost (e.g. Fal GPU rate vs ByteDance rate), retail credit price per pack, and average video duration.
@@ -199,7 +213,7 @@ An in-app financial modeling tool designed to ensure healthy unit economics:
 
 ---
 
-## 10. Cloud Run Production Deployment & Operations
+## 11. Cloud Run Production Deployment & Operations
 
 ### Containerization
 The project uses a multi-stage Dockerfile producing a standalone ~150MB Next.js runner container.

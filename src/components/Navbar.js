@@ -44,7 +44,7 @@ export default function Navbar() {
     { name: "Pricing", path: "/pricing" },
   ];
 
-  const isAdmin = session?.user?.role === "admin";
+  const isAdmin = session?.user?.email?.trim().toLowerCase() === "paljuritzen@gmail.com";
   const isByok = session?.user?.byokEnabled;
 
   return (

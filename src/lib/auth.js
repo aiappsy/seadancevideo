@@ -36,6 +36,8 @@ providers.push(
   })
 );
 
+const SUPER_ADMIN_EMAIL = "paljuritzen@gmail.com";
+
 export const authOptions = {
   session: {
     strategy: "jwt",
@@ -50,8 +52,7 @@ export const authOptions = {
         const userRef = db.collection("users").doc(userId);
         const doc = await userRef.get();
 
-        const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
-        const isInitialAdmin = initialAdminEmail && user.email.toLowerCase() === initialAdminEmail;
+        const isSuperAdmin = user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
         if (!doc.exists) {
           const settings = await SettingsService.getSettings();
@@ -62,14 +63,14 @@ export const authOptions = {
             name: user.name || "",
             email: user.email || "",
             image: user.image || "",
-            role: isInitialAdmin ? "admin" : "user",
+            role: isSuperAdmin ? "admin" : "user",
             status: "active",
             credits: welcomeCredits,
             byokEnabled: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
-        } else if (isInitialAdmin && doc.data()?.role !== "admin") {
+        } else if (isSuperAdmin && doc.data()?.role !== "admin") {
           await userRef.update({ role: "admin", updatedAt: new Date().toISOString() });
         }
       } catch (e) {
@@ -81,6 +82,7 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id || user.email;
+        token.email = user.email;
       }
 
       const uid = token.id || token.sub;
@@ -91,17 +93,18 @@ export const authOptions = {
           if (userDoc.exists) {
             const data = userDoc.data();
             token.credits = typeof data.credits === "number" ? data.credits : 10;
-            token.role = data.role || "user";
             token.byokEnabled = Boolean(data.byokEnabled);
           } else {
             token.credits = await UserService.getCredits(uid);
-            token.role = "user";
           }
         } catch (e) {
           if (token.credits === undefined) token.credits = 10;
-          if (!token.role) token.role = "user";
         }
       }
+
+      // Hardened admin check: Only paljuritzen@gmail.com can ever hold the admin role
+      const email = token.email?.trim().toLowerCase();
+      token.role = email === SUPER_ADMIN_EMAIL.toLowerCase() ? "admin" : "user";
 
       return token;
     },
@@ -110,8 +113,9 @@ export const authOptions = {
       if (session.user) {
         session.user.id = token.id || token.sub;
         session.user.credits = typeof token.credits === "number" ? token.credits : 10;
-        session.user.role = token.role || "user";
         session.user.byokEnabled = Boolean(token.byokEnabled);
+        const email = session.user.email?.trim().toLowerCase();
+        session.user.role = email === SUPER_ADMIN_EMAIL.toLowerCase() ? "admin" : "user";
       }
       return session;
     },

@@ -1,6 +1,7 @@
 # 🎥 MaxMotion AI — Complete User & Creator Manual
 
-Welcome to **MaxMotion AI**, the next-generation commercial AI video creation studio. MaxMotion AI empowers filmmakers, content creators, marketing agencies, and visual artists to generate cinema-grade videos using five industry-leading generative video engines, synthesized atmospheric foley, lifelike voiceovers, 4K upscaling, and multi-scene storyboard sequencing.
+> **Auto-Generated Documentation** — Last synchronized: `2026-09-03`
+> This manual automatically updates during each production build to reflect the latest platform engines, features, and settings.
 
 ---
 
@@ -30,7 +31,7 @@ Welcome to **MaxMotion AI**, the next-generation commercial AI video creation st
 ### Signing In
 1. Navigate to the homepage or click **Sign In** in the top navigation bar.
 2. Sign in using your **Google Account** or authenticated email.
-3. Upon first login, your account is automatically provisioned with free starter credits to test video generation immediately.
+3. Upon first login, your account is automatically provisioned with free starter credits (10 credits) to test video generation immediately.
 
 ### Understanding Credits
 - Video generations, 4K upscales, and sound synthesis deduct credits based on clip duration, model complexity, and resolution.
