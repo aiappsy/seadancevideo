@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { SettingsService } from "@/lib/services/settings";
+import { UserService } from "@/lib/services/user";
+import { GeminiService } from "@/lib/services/gemini";
 
 export async function POST(req) {
   try {
@@ -10,55 +12,53 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt } = await req.json();
-    if (!prompt || !prompt.trim()) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    const { prompt, model = "wan-2.1", camera = "", imageBase64 = null, mimeType = "image/jpeg" } = await req.json();
+    if (!prompt?.trim() && !imageBase64) {
+      return NextResponse.json({ error: "Prompt or image reference is required" }, { status: 400 });
     }
 
     const settings = await SettingsService.getSettings();
-    const openRouterKey = settings.ai?.openRouterApiKey || process.env.OPENROUTER_API_KEY;
 
-    if (openRouterKey) {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openRouterKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.0-flash-001",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an expert cinematic AI video director. Given the user's idea, rewrite it into a single, high-fidelity, photorealistic video prompt under 55 words. Include specific camera movement (e.g. slow tracking shot, 35mm lens), cinematic lighting, volumetric atmosphere, and realistic physics. Respond ONLY with the rewritten prompt.",
-            },
-            { role: "user", content: prompt.trim() },
-          ],
-          max_tokens: 120,
-          temperature: 0.7,
-        }),
-      });
+    // Check user BYOK key
+    let userGeminiKey = "";
+    if (session?.user?.id) {
+      try {
+        const profile = await UserService.getUserProfile(session.user.id);
+        userGeminiKey = profile?.byokGeminiKey || "";
+      } catch (e) {}
+    }
 
-      if (response.ok) {
-        const data = await response.json();
-        const enhanced = data.choices?.[0]?.message?.content?.trim();
+    const apiKey = GeminiService.resolveApiKey(userGeminiKey, settings);
+
+    if (apiKey) {
+      try {
+        const enhanced = await GeminiService.enhancePrompt({
+          prompt: (prompt || "").trim(),
+          model,
+          camera,
+          imageBase64,
+          mimeType,
+          apiKey,
+        });
+
         if (enhanced) {
-          return NextResponse.json({ enhancedPrompt: enhanced });
+          return NextResponse.json({ enhancedPrompt: enhanced, engine: "gemini-2.0-flash" });
         }
+      } catch (err) {
+        console.warn("[GEMINI_ENHANCE_FALLBACK]", err.message);
       }
     }
 
-    // Heuristic cinematic prompt expansion fallback if no OpenRouter key is set
+    // Heuristic cinematic prompt expansion fallback if no Gemini key is set
     const cinematicEnhancements = [
       "cinematic 35mm film grain, moody volumetric lighting, slow smooth tracking camera, photorealistic depth of field, 8k render",
       "hyper-detailed cinematic composition, dynamic lighting with golden hour rim light, 4k ultra-realistic motion dynamics",
       "anamorphic lens flare, photorealistic atmospheric haze, high-fidelity fluid motion, master cinematography",
     ];
     const picked = cinematicEnhancements[Math.floor(Math.random() * cinematicEnhancements.length)];
-    const fallbackPrompt = `${prompt.trim()}, ${picked}`;
+    const fallbackPrompt = `${(prompt || "cinematic scene").trim()}, ${camera ? camera + ", " : ""}${picked}`;
 
-    return NextResponse.json({ enhancedPrompt: fallbackPrompt });
+    return NextResponse.json({ enhancedPrompt: fallbackPrompt, engine: "heuristic-fallback" });
   } catch (error) {
     console.error("[ENHANCE_PROMPT_ERROR]", error);
     return NextResponse.json({ error: "Failed to enhance prompt" }, { status: 500 });

@@ -30,6 +30,7 @@ export const defaultSystemSettings = {
     seedanceApiKey: process.env.SEEDANCE_V2_API_KEY || "",
     seedanceMiniApiKey: process.env.SEEDANCE_V2_API_KEY || "",
     falApiKey: process.env.FAL_KEY || process.env.FAL_API_KEY || "",
+    geminiApiKey: process.env.GEMINI_API_KEY || "",
     openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
     defaultModel: "seedance-2.0",
     enabledEngines: {
@@ -150,6 +151,7 @@ export const SettingsService = {
       defaultModel: all.ai.defaultModel,
       enabledEngines: all.ai.enabledEngines || defaultSystemSettings.ai.enabledEngines,
       hasOpenRouter: Boolean(all.ai.openRouterApiKey),
+      hasGeminiFlash: Boolean(all.ai.geminiApiKey || process.env.GEMINI_API_KEY || all.ai.openRouterApiKey),
       templates: all.templates || defaultTemplates,
       stripe: {
         enabled: all.billing.stripe.enabled,

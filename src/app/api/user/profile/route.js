@@ -30,6 +30,11 @@ export async function GET() {
       ? `••••••••••••${data.byokFalKey.slice(-4)}`
       : "";
 
+    const hasGeminiKey = Boolean(data.byokGeminiKey);
+    const maskedGeminiKey = hasGeminiKey
+      ? `••••••••••••${data.byokGeminiKey.slice(-4)}`
+      : "";
+
     return NextResponse.json({
       id: userId,
       name: data.name || session.user.name || "Creator",
@@ -42,6 +47,8 @@ export async function GET() {
       maskedByokKey: maskedKey,
       hasByokFalKey: hasFalKey,
       maskedByokFalKey: maskedFalKey,
+      hasByokGeminiKey: hasGeminiKey,
+      maskedByokGeminiKey: maskedGeminiKey,
       apiKey: data.apiKey || null,
       activePlanId: data.activePlanId || "free",
       planType: data.planType || "free",
@@ -68,7 +75,7 @@ export async function PATCH(req) {
   try {
     const userId = session.user.id || session.user.email;
     const body = await req.json();
-    const { name, byokApiKey, byokFalKey, byokEnabled, preferences, action } = body;
+    const { name, byokApiKey, byokFalKey, byokGeminiKey, byokEnabled, preferences, action } = body;
 
     // Test MuAPI key action
     if (action === "test_byok_key") {
@@ -106,6 +113,39 @@ export async function PATCH(req) {
       return NextResponse.json({ success: true, message: "Fal.ai Key verified successfully!" });
     }
 
+    // Test Gemini Flash key action
+    if (action === "test_byok_gemini_key") {
+      const keyToTest = byokGeminiKey?.trim();
+      if (!keyToTest) {
+        return NextResponse.json({ error: "Please enter a Gemini API key to test" }, { status: 400 });
+      }
+
+      try {
+        const pingRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${keyToTest}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: "ping" }] }],
+            }),
+          }
+        );
+
+        if (!pingRes.ok) {
+          const errData = await pingRes.json().catch(() => ({}));
+          return NextResponse.json(
+            { error: errData.error?.message || "Invalid API key: Unauthorized by Google Gemini" },
+            { status: 400 }
+          );
+        }
+
+        return NextResponse.json({ success: true, message: "Google Gemini Flash key verified successfully!" });
+      } catch (err) {
+        return NextResponse.json({ error: "Connection to Gemini API failed: " + err.message }, { status: 400 });
+      }
+    }
+
     const updates = { updatedAt: new Date().toISOString() };
 
     if (name !== undefined) updates.name = name;
@@ -114,6 +154,9 @@ export async function PATCH(req) {
     }
     if (byokFalKey !== undefined && byokFalKey.trim() !== "") {
       updates.byokFalKey = byokFalKey.trim();
+    }
+    if (byokGeminiKey !== undefined && byokGeminiKey.trim() !== "") {
+      updates.byokGeminiKey = byokGeminiKey.trim();
     }
     if (typeof byokEnabled === "boolean") {
       updates.byokEnabled = byokEnabled;

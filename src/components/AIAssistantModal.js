@@ -11,6 +11,7 @@ import {
   FaFilm,
   FaCheck,
   FaQuestionCircle,
+  FaImage,
 } from "react-icons/fa";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -27,6 +28,8 @@ export default function AIAssistantModal() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -42,13 +45,42 @@ export default function AIAssistantModal() {
     "What settings should I use for TikTok/Reels?",
   ];
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage({
+        base64: reader.result,
+        mimeType: file.type || "image/jpeg",
+        name: file.name,
+      });
+      toast.success("Reference image attached for Gemini Flash analysis!");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSend = async (userText) => {
     const textToSend = userText || input;
-    if (!textToSend.trim() || loading) return;
+    if ((!textToSend.trim() && !selectedImage) || loading) return;
 
-    const newMessages = [...messages, { role: "user", content: textToSend }];
+    const messageContent = textToSend.trim() || "Analyze this reference image and direct a cinematic video scene:";
+    const newMessages = [
+      ...messages,
+      {
+        role: "user",
+        content: messageContent,
+        imagePreview: selectedImage?.base64 || null,
+      },
+    ];
     setMessages(newMessages);
     setInput("");
+    const imagePayload = selectedImage;
+    setSelectedImage(null);
     setLoading(true);
 
     try {
@@ -56,8 +88,10 @@ export default function AIAssistantModal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: textToSend,
+          message: messageContent,
           history: newMessages,
+          imageBase64: imagePayload?.base64 || null,
+          mimeType: imagePayload?.mimeType || "image/jpeg",
         }),
       });
 
@@ -131,10 +165,15 @@ export default function AIAssistantModal() {
                     <FaFilm size={14} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black uppercase text-foreground">
-                      MaxMotion AI Studio Director
+                    <h3 className="text-xs font-black uppercase text-foreground flex items-center gap-1.5">
+                      <span>MaxMotion AI Studio Director</span>
                     </h3>
-                    <p className="text-[10px] text-muted">Creative Advisor & Prompt Specialist</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-[10px] text-muted">Creative Advisor</p>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30">
+                        ⚡ Gemini Flash Omni
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -155,6 +194,17 @@ export default function AIAssistantModal() {
                       m.role === "user" ? "items-end" : "items-start"
                     }`}
                   >
+                    {/* User Uploaded Reference Image Preview */}
+                    {m.imagePreview && (
+                      <div className="mb-1.5 max-w-[180px] rounded-xl overflow-hidden border border-primary/40 shadow-md">
+                        <img
+                          src={m.imagePreview}
+                          alt="Reference Frame"
+                          className="w-full h-auto object-cover max-h-36"
+                        />
+                      </div>
+                    )}
+
                     <div
                       className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed whitespace-pre-wrap ${
                         m.role === "user"
@@ -218,6 +268,25 @@ export default function AIAssistantModal() {
                 </div>
               </div>
 
+              {/* Attached Image Pill Preview */}
+              {selectedImage && (
+                <div className="px-3 pt-2 pb-0 bg-glass-bg flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs text-blue-300">
+                    <FaImage size={11} className="text-blue-400" />
+                    <span className="text-[10px] font-medium truncate max-w-[200px]">
+                      {selectedImage.name || "Attached Frame"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedImage(null)}
+                      className="p-0.5 hover:text-white text-muted transition-colors ml-1"
+                    >
+                      <FaTimes size={10} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Chat Input Bar */}
               <form
                 onSubmit={(e) => {
@@ -227,15 +296,36 @@ export default function AIAssistantModal() {
                 className="p-3 border-t border-glass-border bg-glass-bg flex items-center gap-2"
               >
                 <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 rounded-xl bg-glass-hover hover:bg-glass-bg border border-glass-border text-muted hover:text-amber-400 transition-colors"
+                  title="Attach reference frame or storyboard image for Gemini Flash vision analysis"
+                >
+                  <FaImage size={13} />
+                </button>
+
+                <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask for advice, prompts, or model comparisons..."
+                  placeholder={
+                    selectedImage
+                      ? "Direct Gemini Flash on this image... (or press send)"
+                      : "Ask for advice, prompts, or attach a frame..."
+                  }
                   className="flex-1 px-3 py-2 bg-glass-hover border border-glass-border rounded-xl text-xs text-foreground outline-none focus:border-primary"
                 />
                 <button
                   type="submit"
-                  disabled={loading || !input.trim()}
+                  disabled={loading || (!input.trim() && !selectedImage)}
                   className="p-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover transition-colors disabled:opacity-40"
                 >
                   <FaPaperPlane size={12} />

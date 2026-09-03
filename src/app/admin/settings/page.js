@@ -310,7 +310,25 @@ export default function AdminSettingsPage() {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
-                OpenRouter API Key (For AI Prompt Enhancer)
+                Master Google Gemini Flash API Key (For AI Director & Vision Analysis)
+              </label>
+              <input
+                type="password"
+                value={settings.ai?.geminiApiKey || ""}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    ai: { ...settings.ai, geminiApiKey: e.target.value },
+                  })
+                }
+                placeholder="Enter Gemini API Key (e.g. AIzaSy...)"
+                className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                OpenRouter API Key (Alternative Copilot Fallback)
               </label>
               <input
                 type="password"

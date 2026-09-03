@@ -36,8 +36,10 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [byokApiKey, setByokApiKey] = useState("");
   const [byokFalKey, setByokFalKey] = useState("");
+  const [byokGeminiKey, setByokGeminiKey] = useState("");
   const [byokEnabled, setByokEnabled] = useState(false);
   const [testingFalKey, setTestingFalKey] = useState(false);
+  const [testingGeminiKey, setTestingGeminiKey] = useState(false);
   const [userApiKey, setUserApiKey] = useState("");
   const [copiedApiKey, setCopiedApiKey] = useState(false);
   const [generatingApiKey, setGeneratingApiKey] = useState(false);
@@ -141,6 +143,7 @@ export default function SettingsPage() {
           byokEnabled,
           byokApiKey: byokApiKey.trim() || undefined,
           byokFalKey: byokFalKey.trim() || undefined,
+          byokGeminiKey: byokGeminiKey.trim() || undefined,
           preferences,
         }),
       });
@@ -151,6 +154,7 @@ export default function SettingsPage() {
       toast.success("Settings saved successfully!");
       setByokApiKey("");
       setByokFalKey("");
+      setByokGeminiKey("");
       fetchProfile();
       if (update) update();
     } catch (err) {
@@ -215,6 +219,35 @@ export default function SettingsPage() {
       toast.error("Verification failed");
     } finally {
       setTestingFalKey(false);
+    }
+  };
+
+  const handleTestGeminiKey = async () => {
+    if (!byokGeminiKey.trim()) {
+      toast.error("Please enter a Google Gemini API key to test");
+      return;
+    }
+
+    try {
+      setTestingGeminiKey(true);
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test_byok_gemini_key",
+          byokGeminiKey: byokGeminiKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Google Gemini Flash key verified!");
+      } else {
+        toast.error(data.error || "Invalid Gemini API key");
+      }
+    } catch (e) {
+      toast.error("Verification failed");
+    } finally {
+      setTestingGeminiKey(false);
     }
   };
 
@@ -474,6 +507,41 @@ export default function SettingsPage() {
             {profile?.hasByokFalKey && (
               <p className="text-[10px] text-emerald-400 flex items-center gap-1">
                 <FaCheckCircle size={10} /> Active ({profile.maskedByokFalKey}). Enter a new key to update.
+              </p>
+            )}
+          </div>
+
+          {/* Google Gemini Flash Key Input */}
+          <div className="space-y-2 pt-2 border-t border-glass-border">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                Google Gemini Flash API Key
+              </label>
+              <span className="text-[9px] text-blue-400 font-medium">For AI Studio Director & Vision Enhancer</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={byokGeminiKey}
+                onChange={(e) => setByokGeminiKey(e.target.value)}
+                placeholder={profile?.hasByokGeminiKey ? profile.maskedByokGeminiKey : "Enter Google Gemini API Key (AIzaSy...)"}
+                className="flex-1 px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+              />
+              <button
+                onClick={handleTestGeminiKey}
+                disabled={testingGeminiKey || !byokGeminiKey.trim()}
+                className="px-4 py-2 bg-glass-hover border border-glass-border rounded-md text-xs font-bold text-foreground hover:bg-glass-bg transition-colors disabled:opacity-50"
+              >
+                {testingGeminiKey ? "Testing..." : "Test Gemini"}
+              </button>
+            </div>
+            {profile?.hasByokGeminiKey ? (
+              <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                <FaCheckCircle size={10} /> Active ({profile.maskedByokGeminiKey}). Enter a new key to update.
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted">
+                Free personal API keys are available from Google AI Studio. Powers real-time director advice and vision-to-prompt analysis.
               </p>
             )}
           </div>
