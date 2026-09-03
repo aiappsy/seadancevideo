@@ -79,16 +79,20 @@ function CustomSelect({ label, value, options, onChange, icon: Icon, tooltip }) 
 
   return (
     <div className="space-y-1.5" ref={containerRef}>
-      <div className="flex items-center gap-1.5">
-        <label className="text-[10px] font-medium text-muted uppercase tracking-wider">
+      {tooltip ? (
+        <Tooltip content={tooltip} className="w-full">
+          <div className="flex items-center gap-1.5 cursor-pointer">
+            <label className="text-[10px] font-medium text-muted uppercase tracking-wider cursor-pointer">
+              {label}
+            </label>
+            <span className="text-[10px] text-amber-400 font-bold">ⓘ</span>
+          </div>
+        </Tooltip>
+      ) : (
+        <label className="text-[10px] font-medium text-muted uppercase tracking-wider block">
           {label}
         </label>
-        {tooltip && (
-          <Tooltip content={tooltip}>
-            <span className="text-[9px] text-muted hover:text-primary cursor-pointer">ⓘ</span>
-          </Tooltip>
-        )}
-      </div>
+      )}
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -654,7 +658,7 @@ export default function Home() {
             })()}
 
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 p-1 bg-glass-hover rounded-md border border-glass-border">
-              <Tooltip content="ByteDance flagship model for high-energy motion and action scenes.">
+              <Tooltip content="ByteDance flagship model for high-energy motion and action scenes." className="w-full h-full block">
                 <button
                   type="button"
                   onClick={() => setModel("seedance-2.0")}
@@ -669,7 +673,7 @@ export default function Home() {
                 </button>
               </Tooltip>
 
-              <Tooltip content="Fast budget model with a 50% discount on credit consumption.">
+              <Tooltip content="Fast budget model with a 50% discount on credit consumption." className="w-full h-full block">
                 <button
                   type="button"
                   onClick={() => setModel("seedance-mini")}
@@ -684,7 +688,7 @@ export default function Home() {
                 </button>
               </Tooltip>
 
-              <Tooltip content="Alibaba 14B model known for remarkable cinematic lighting and scenery.">
+              <Tooltip content="Alibaba 14B model known for remarkable cinematic lighting and scenery." className="w-full h-full block">
                 <button
                   type="button"
                   onClick={() => setModel("wan-2.1")}
@@ -699,7 +703,7 @@ export default function Home() {
                 </button>
               </Tooltip>
 
-              <Tooltip content="Leading engine for realistic human physical motion, walking, and anatomy.">
+              <Tooltip content="Leading engine for realistic human physical motion, walking, and anatomy." className="w-full h-full block">
                 <button
                   type="button"
                   onClick={() => setModel("kling-1.5")}
@@ -714,7 +718,7 @@ export default function Home() {
                 </button>
               </Tooltip>
 
-              <Tooltip content="Hailuo Video-01 benchmark for facial acting, emotion, and storytelling.">
+              <Tooltip content="Hailuo Video-01 benchmark for facial acting, emotion, and storytelling." className="w-full h-full block">
                 <button
                   type="button"
                   onClick={() => setModel("minimax")}
