@@ -14,13 +14,61 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, duration = 5, creationId } = await req.json();
+    const { prompt, text, type = "sound_effects", voiceId, duration = 5, creationId } = await req.json();
 
-    if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    if (!prompt && !text) {
+      return NextResponse.json({ error: "Prompt or text is required" }, { status: 400 });
     }
 
     const settings = await SettingsService.getSettings();
+
+    // Route 1: Voiceover & Narration via ElevenLabs
+    if (type === "voiceover") {
+      let apiKey = null;
+
+      // Check User BYOK first
+      if (session?.user?.id) {
+        const userDoc = await db.collection("users").doc(session.user.id).get();
+        if (userDoc.exists && userDoc.data().byokElevenLabsKey) {
+          apiKey = userDoc.data().byokElevenLabsKey;
+        }
+      }
+
+      if (!apiKey) {
+        apiKey = settings.ai?.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY;
+      }
+
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: "ElevenLabs API key not configured. Please add your key in Settings." },
+          { status: 400 }
+        );
+      }
+
+      const { ElevenLabsService } = await import("@/lib/services/elevenlabs");
+      const speechResult = await ElevenLabsService.generateSpeech({
+        text: text || prompt,
+        voiceId,
+        apiKey,
+      });
+
+      if (creationId && speechResult.audioUrl) {
+        await db.collection("creations").doc(creationId).update({
+          voiceoverUrl: speechResult.audioUrl,
+          hasVoiceover: true,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        type: "voiceover",
+        audioUrl: speechResult.audioUrl,
+        voiceId: speechResult.voiceId,
+      });
+    }
+
+    // Route 2: Atmospheric Sound Effects via Fal.ai MMAudio
     const apiKey = settings.ai?.falApiKey || process.env.FAL_KEY;
 
     if (!apiKey) {
@@ -61,6 +109,7 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
+      type: "sound_effects",
       audioUrl,
     });
   } catch (error) {

@@ -24,6 +24,14 @@ export const defaultSystemSettings = {
   storage: {
     mirrorToFirebase: true,
     bucketName: process.env.FIREBASE_STORAGE_BUCKET || "",
+    r2: {
+      enabled: false,
+      accountId: process.env.R2_ACCOUNT_ID || "",
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+      bucketName: process.env.R2_BUCKET_NAME || "",
+      publicDomain: process.env.R2_PUBLIC_DOMAIN || "",
+    },
   },
   ai: {
     provider: "multi",
@@ -32,6 +40,11 @@ export const defaultSystemSettings = {
     falApiKey: process.env.FAL_KEY || process.env.FAL_API_KEY || "",
     geminiApiKey: process.env.GEMINI_API_KEY || "",
     openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
+    elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+    replicateApiKey: process.env.REPLICATE_API_KEY || process.env.REPLICATE_API_TOKEN || "",
+    openaiApiKey: process.env.OPENAI_API_KEY || "",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+    resendApiKey: process.env.RESEND_API_KEY || "",
     defaultModel: "seedance-2.0",
     enabledEngines: {
       "seedance-2.0": true,

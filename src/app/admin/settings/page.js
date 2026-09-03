@@ -39,6 +39,27 @@ export default function AdminSettingsPage() {
   const [showAppKey, setShowAppKey] = useState(false);
   const [copiedAppKey, setCopiedAppKey] = useState(false);
   const [rotatingAppKey, setRotatingAppKey] = useState(false);
+  // Health diagnostic state
+  const [healthResults, setHealthResults] = useState(null);
+  const [diagnosing, setDiagnosing] = useState(false);
+
+  const handleDiagnoseAllKeys = async () => {
+    try {
+      setDiagnosing(true);
+      const res = await fetch("/api/admin/health-keys");
+      const data = await res.json();
+      if (res.ok && data.services) {
+        setHealthResults(data.services);
+        toast.success("API Key Diagnostic complete!");
+      } else {
+        toast.error(data.error || "Diagnostic check failed");
+      }
+    } catch (e) {
+      toast.error("Diagnostic request failed");
+    } finally {
+      setDiagnosing(false);
+    }
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -157,7 +178,7 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 max-w-4xl">
       <Toaster position="top-right" />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-foreground">
             System Configuration
@@ -166,15 +187,55 @@ export default function AdminSettingsPage() {
             Dynamic settings stored in Firestore. Changes reflect across all users without redeployment.
           </p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-md shadow-primary/20 disabled:opacity-50"
-        >
-          <FaSave size={12} />
-          <span>{saving ? "Saving..." : "Save Settings"}</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleDiagnoseAllKeys}
+            disabled={diagnosing}
+            className="px-4 py-2 bg-glass-hover hover:bg-glass-bg border border-glass-border rounded-lg text-xs font-bold text-foreground flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <FaSyncAlt size={11} className={diagnosing ? "animate-spin text-primary" : "text-amber-400"} />
+            <span>{diagnosing ? "Diagnosing..." : "⚡ Test All Keys"}</span>
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-md shadow-primary/20 disabled:opacity-50"
+          >
+            <FaSave size={12} />
+            <span>{saving ? "Saving..." : "Save Settings"}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Live Health Status Bar */}
+      {healthResults && (
+        <div className="p-3 bg-glass-bg border border-glass-border rounded-xl flex flex-wrap items-center gap-2 animate-fade-in text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted mr-1">
+            Key Vault Status:
+          </span>
+          {Object.entries(healthResults).map(([key, info]) => {
+            const isOp = info.status === "operational";
+            const isUncfg = info.status === "unconfigured";
+            return (
+              <div
+                key={key}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border ${
+                  isOp
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    : isUncfg
+                    ? "bg-neutral-800 text-neutral-400 border-neutral-700"
+                    : "bg-red-500/10 text-red-400 border-red-500/30"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isOp ? "bg-emerald-400" : isUncfg ? "bg-neutral-500" : "bg-red-400"}`} />
+                <span>{key}</span>
+                {info.latencyMs ? <span className="opacity-60 text-[8px]">({info.latencyMs}ms)</span> : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-glass-border pb-2">
@@ -376,20 +437,112 @@ export default function AdminSettingsPage() {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
-                OpenRouter API Key (Alternative Copilot Fallback)
+                Replicate API Token (Secondary Video Inference Failover)
               </label>
               <input
                 type="password"
-                value={settings.ai?.openRouterApiKey || ""}
+                value={settings.ai?.replicateApiKey || ""}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    ai: { ...settings.ai, openRouterApiKey: e.target.value },
+                    ai: { ...settings.ai, replicateApiKey: e.target.value },
                   })
                 }
-                placeholder="Enter OpenRouter Key (e.g. sk-or-v1-...)"
+                placeholder="r8_..."
                 className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
               />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                ElevenLabs API Key (For AI Voiceovers, Narration & Dubbing)
+              </label>
+              <input
+                type="password"
+                value={settings.ai?.elevenLabsApiKey || ""}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    ai: { ...settings.ai, elevenLabsApiKey: e.target.value },
+                  })
+                }
+                placeholder="sk_..."
+                className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  Direct OpenAI API Key (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={settings.ai?.openaiApiKey || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      ai: { ...settings.ai, openaiApiKey: e.target.value },
+                    })
+                  }
+                  placeholder="sk-proj-..."
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  Direct Anthropic API Key (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={settings.ai?.anthropicApiKey || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      ai: { ...settings.ai, anthropicApiKey: e.target.value },
+                    })
+                  }
+                  placeholder="sk-ant-..."
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  OpenRouter API Key (Alternative Copilot Fallback)
+                </label>
+                <input
+                  type="password"
+                  value={settings.ai?.openRouterApiKey || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      ai: { ...settings.ai, openRouterApiKey: e.target.value },
+                    })
+                  }
+                  placeholder="sk-or-v1-..."
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  Resend API Key (Broadcast & Transactional Emails)
+                </label>
+                <input
+                  type="password"
+                  value={settings.ai?.resendApiKey || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      ai: { ...settings.ai, resendApiKey: e.target.value },
+                    })
+                  }
+                  placeholder="re_..."
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
             </div>
           </div>
 
@@ -831,6 +984,147 @@ export default function AdminSettingsPage() {
                   })
                 }
                 placeholder="Leave blank to use default project bucket"
+                className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Cloudflare R2 / S3 Storage ($0 Egress) */}
+          <div className="bg-glass-bg border border-glass-border rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-glass-border">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <FaHdd className="text-amber-400" /> Cloudflare R2 / S3 High-Bandwidth Storage
+                </h3>
+                <p className="text-[10px] text-muted">
+                  S3-compatible object storage with <strong className="text-emerald-400">$0 egress fees</strong> for streaming 4K videos at scale.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.storage?.r2?.enabled ?? false}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      storage: {
+                        ...settings.storage,
+                        r2: {
+                          ...settings.storage?.r2,
+                          enabled: e.target.checked,
+                        },
+                      },
+                    })
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-glass-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  R2 Account ID
+                </label>
+                <input
+                  type="text"
+                  value={settings.storage?.r2?.accountId || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      storage: {
+                        ...settings.storage,
+                        r2: { ...settings.storage?.r2, accountId: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="Cloudflare Account ID"
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  R2 Bucket Name
+                </label>
+                <input
+                  type="text"
+                  value={settings.storage?.r2?.bucketName || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      storage: {
+                        ...settings.storage,
+                        r2: { ...settings.storage?.r2, bucketName: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="e.g. maxmotion-videos"
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  R2 Access Key ID
+                </label>
+                <input
+                  type="password"
+                  value={settings.storage?.r2?.accessKeyId || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      storage: {
+                        ...settings.storage,
+                        r2: { ...settings.storage?.r2, accessKeyId: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="R2 Access Key ID"
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  R2 Secret Access Key
+                </label>
+                <input
+                  type="password"
+                  value={settings.storage?.r2?.secretAccessKey || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      storage: {
+                        ...settings.storage,
+                        r2: { ...settings.storage?.r2, secretAccessKey: e.target.value },
+                      },
+                    })
+                  }
+                  placeholder="R2 Secret Access Key"
+                  className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">
+                Custom Public Domain / CDN URL (Optional)
+              </label>
+              <input
+                type="text"
+                value={settings.storage?.r2?.publicDomain || ""}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    storage: {
+                      ...settings.storage,
+                      r2: { ...settings.storage?.r2, publicDomain: e.target.value },
+                    },
+                  })
+                }
+                placeholder="e.g. https://cdn.maxmotion.ai"
                 className="w-full px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
               />
             </div>

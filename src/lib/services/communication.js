@@ -7,7 +7,7 @@ export const CommunicationService = {
   /**
    * Create an announcement or targeted direct message from admin.
    */
-  async createMessage({ title, message, type = "info", targetUserId = "all", authorEmail = "Admin" }) {
+  async createMessage({ title, message, type = "info", targetUserId = "all", authorEmail = "Admin", sendEmail = false }) {
     const docRef = db.collection(ANNOUNCEMENTS_COLLECTION).doc();
     const newMsg = {
       id: docRef.id,
@@ -21,6 +21,27 @@ export const CommunicationService = {
     };
 
     await docRef.set(newMsg);
+
+    // Optionally deliver real email broadcast if requested
+    if (sendEmail) {
+      try {
+        const { EmailService } = await import("./email");
+        let recipients = [];
+        if (targetUserId === "all") {
+          const usersSnap = await db.collection("users").limit(100).get();
+          recipients = usersSnap.docs.map((d) => d.data().email).filter(Boolean);
+        } else {
+          const uDoc = await db.collection("users").doc(targetUserId).get();
+          if (uDoc.exists && uDoc.data().email) recipients = [uDoc.data().email];
+        }
+        if (recipients.length > 0) {
+          await EmailService.sendBroadcast({ recipients, title, message, type });
+        }
+      } catch (err) {
+        console.warn("[COMMUNICATION_EMAIL_DISPATCH_FAILED]", err.message);
+      }
+    }
+
     return newMsg;
   },
 

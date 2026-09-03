@@ -37,9 +37,11 @@ export default function SettingsPage() {
   const [byokApiKey, setByokApiKey] = useState("");
   const [byokFalKey, setByokFalKey] = useState("");
   const [byokGeminiKey, setByokGeminiKey] = useState("");
+  const [byokElevenLabsKey, setByokElevenLabsKey] = useState("");
   const [byokEnabled, setByokEnabled] = useState(false);
   const [testingFalKey, setTestingFalKey] = useState(false);
   const [testingGeminiKey, setTestingGeminiKey] = useState(false);
+  const [testingElevenLabsKey, setTestingElevenLabsKey] = useState(false);
   const [userApiKey, setUserApiKey] = useState("");
   const [copiedApiKey, setCopiedApiKey] = useState(false);
   const [generatingApiKey, setGeneratingApiKey] = useState(false);
@@ -144,6 +146,7 @@ export default function SettingsPage() {
           byokApiKey: byokApiKey.trim() || undefined,
           byokFalKey: byokFalKey.trim() || undefined,
           byokGeminiKey: byokGeminiKey.trim() || undefined,
+          byokElevenLabsKey: byokElevenLabsKey.trim() || undefined,
           preferences,
         }),
       });
@@ -155,6 +158,7 @@ export default function SettingsPage() {
       setByokApiKey("");
       setByokFalKey("");
       setByokGeminiKey("");
+      setByokElevenLabsKey("");
       fetchProfile();
       if (update) update();
     } catch (err) {
@@ -248,6 +252,35 @@ export default function SettingsPage() {
       toast.error("Verification failed");
     } finally {
       setTestingGeminiKey(false);
+    }
+  };
+
+  const handleTestElevenLabsKey = async () => {
+    if (!byokElevenLabsKey.trim()) {
+      toast.error("Please enter an ElevenLabs API key to test");
+      return;
+    }
+
+    try {
+      setTestingElevenLabsKey(true);
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test_byok_elevenlabs_key",
+          byokElevenLabsKey: byokElevenLabsKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "ElevenLabs key verified successfully!");
+      } else {
+        toast.error(data.error || "Invalid ElevenLabs API key");
+      }
+    } catch (e) {
+      toast.error("Verification failed");
+    } finally {
+      setTestingElevenLabsKey(false);
     }
   };
 
@@ -542,6 +575,41 @@ export default function SettingsPage() {
             ) : (
               <p className="text-[10px] text-muted">
                 Free personal API keys are available from Google AI Studio. Powers real-time director advice and vision-to-prompt analysis.
+              </p>
+            )}
+          </div>
+
+          {/* ElevenLabs Key Input */}
+          <div className="space-y-2 pt-2 border-t border-glass-border">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                ElevenLabs API Key
+              </label>
+              <span className="text-[9px] text-purple-400 font-medium">For AI Voiceovers, Narration & Dubbing</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={byokElevenLabsKey}
+                onChange={(e) => setByokElevenLabsKey(e.target.value)}
+                placeholder={profile?.hasByokElevenLabsKey ? profile.maskedByokElevenLabsKey : "Enter ElevenLabs API Key (sk_...)"}
+                className="flex-1 px-3 py-2 bg-glass-hover border border-glass-border rounded-md text-xs text-foreground outline-none focus:border-primary font-mono"
+              />
+              <button
+                onClick={handleTestElevenLabsKey}
+                disabled={testingElevenLabsKey || !byokElevenLabsKey.trim()}
+                className="px-4 py-2 bg-glass-hover border border-glass-border rounded-md text-xs font-bold text-foreground hover:bg-glass-bg transition-colors disabled:opacity-50"
+              >
+                {testingElevenLabsKey ? "Testing..." : "Test Voice Key"}
+              </button>
+            </div>
+            {profile?.hasByokElevenLabsKey ? (
+              <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                <FaCheckCircle size={10} /> Active ({profile.maskedByokElevenLabsKey}). Enter a new key to update.
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted">
+                Powers lifelike multi-character speech and cinematic voiceovers with 0 platform fees.
               </p>
             )}
           </div>

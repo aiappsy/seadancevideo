@@ -25,7 +25,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { title, message, type = "info", targetUserId = "all" } = body;
+    const { title, message, type = "info", targetUserId = "all", sendEmail = false } = body;
 
     if (!title || !message) {
       return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
@@ -37,6 +37,7 @@ export async function POST(req) {
       type,
       targetUserId,
       authorEmail: auth.session.user.email || "Admin",
+      sendEmail,
     });
 
     return NextResponse.json({ success: true, message: created });

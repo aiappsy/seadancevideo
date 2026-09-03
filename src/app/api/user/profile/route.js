@@ -35,6 +35,16 @@ export async function GET() {
       ? `••••••••••••${data.byokGeminiKey.slice(-4)}`
       : "";
 
+    const hasElevenLabsKey = Boolean(data.byokElevenLabsKey);
+    const maskedElevenLabsKey = hasElevenLabsKey
+      ? `••••••••••••${data.byokElevenLabsKey.slice(-4)}`
+      : "";
+
+    const hasReplicateKey = Boolean(data.byokReplicateKey);
+    const maskedReplicateKey = hasReplicateKey
+      ? `••••••••••••${data.byokReplicateKey.slice(-4)}`
+      : "";
+
     return NextResponse.json({
       id: userId,
       name: data.name || session.user.name || "Creator",
@@ -49,6 +59,10 @@ export async function GET() {
       maskedByokFalKey: maskedFalKey,
       hasByokGeminiKey: hasGeminiKey,
       maskedByokGeminiKey: maskedGeminiKey,
+      hasByokElevenLabsKey: hasElevenLabsKey,
+      maskedByokElevenLabsKey: maskedElevenLabsKey,
+      hasByokReplicateKey: hasReplicateKey,
+      maskedByokReplicateKey: maskedReplicateKey,
       apiKey: data.apiKey || null,
       activePlanId: data.activePlanId || "free",
       planType: data.planType || "free",
@@ -146,6 +160,43 @@ export async function PATCH(req) {
       }
     }
 
+    // Test ElevenLabs key action
+    if (action === "test_byok_elevenlabs_key") {
+      const keyToTest = body.byokElevenLabsKey?.trim();
+      if (!keyToTest) {
+        return NextResponse.json({ error: "Please enter an ElevenLabs API key to test" }, { status: 400 });
+      }
+      try {
+        const { ElevenLabsService } = await import("@/lib/services/elevenlabs");
+        const info = await ElevenLabsService.testApiKey(keyToTest);
+        return NextResponse.json({
+          success: true,
+          message: `ElevenLabs verified! Character quota: ${info.characterCount}/${info.characterLimit}`,
+        });
+      } catch (err) {
+        return NextResponse.json({ error: err.message || "Invalid ElevenLabs API key" }, { status: 400 });
+      }
+    }
+
+    // Test Replicate key action
+    if (action === "test_byok_replicate_key") {
+      const keyToTest = body.byokReplicateKey?.trim();
+      if (!keyToTest) {
+        return NextResponse.json({ error: "Please enter a Replicate API token to test" }, { status: 400 });
+      }
+      try {
+        const repRes = await fetch("https://api.replicate.com/v1/account", {
+          headers: { Authorization: `Bearer ${keyToTest}` },
+        });
+        if (!repRes.ok) {
+          return NextResponse.json({ error: "Invalid Replicate API token" }, { status: 400 });
+        }
+        return NextResponse.json({ success: true, message: "Replicate token verified successfully!" });
+      } catch (err) {
+        return NextResponse.json({ error: "Connection to Replicate failed: " + err.message }, { status: 400 });
+      }
+    }
+
     const updates = { updatedAt: new Date().toISOString() };
 
     if (name !== undefined) updates.name = name;
@@ -157,6 +208,12 @@ export async function PATCH(req) {
     }
     if (byokGeminiKey !== undefined && byokGeminiKey.trim() !== "") {
       updates.byokGeminiKey = byokGeminiKey.trim();
+    }
+    if (body.byokElevenLabsKey !== undefined && body.byokElevenLabsKey.trim() !== "") {
+      updates.byokElevenLabsKey = body.byokElevenLabsKey.trim();
+    }
+    if (body.byokReplicateKey !== undefined && body.byokReplicateKey.trim() !== "") {
+      updates.byokReplicateKey = body.byokReplicateKey.trim();
     }
     if (typeof byokEnabled === "boolean") {
       updates.byokEnabled = byokEnabled;
